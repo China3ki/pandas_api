@@ -32,7 +32,7 @@ def delete_file(filename: str) :
         os.remove(file_path)
         return { "Status": f"{filename} has been removed."}
     except FileNotFoundError:
-        return { "Status": "File not found."}
+        return None
 
 
 def get_file_extension(file: UploadFile):
