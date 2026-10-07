@@ -1,75 +1,76 @@
-import pandas as pd
-
-
-def convert_to_tokens(user_value: str, df: pd.DataFrame) -> list[str]:
-    user_value = user_value.replace(" ", "")
-    tokens = []
-    bufor = ""
+def tokenizer(user_input: str):
     operators = ["+", "-", "*", "/"]
-    for i, token in enumerate(user_value):
+    bufor = ""
+    tokens = []
+    user_input = user_input.strip()
+    for i, token in enumerate(user_input):
+        if not bufor.startswith("c["):
+            bufor = bufor.strip()
         if token in operators:
-            tokens.append(bufor)
+            if bufor.startswith("c["):
+                bufor += token
+                continue
+            if token == "-" and bufor.strip() == "" and (i == 0 or tokens[-1] in operators): # Sprawdza, czy obecny token jest "-" i czy ostatni dodany token jest w operatorach lub i wynosi 0.
+                bufor += "-"
+                continue
+
+            if bufor.strip() != "": ## Przycina spacje buforu, aby nie dodawał się do listy tokenów pusty token.
+                tokens.append(bufor)
             tokens.append(token)
             bufor = ""
             continue
         bufor += token
-        if i == len(user_value) - 1:
+        if bufor.endswith("]"):
             tokens.append(bufor)
+            bufor = ""
+            continue
+        if i == len(user_input) -1:
+            tokens.append(bufor)
+    print(tokens)
+    cleared_tokens = clear_tokens(tokens)
+    return cleared_tokens
 
-    tokens = convert_to_series(df, tokens)
-    return tokens
+def clear_tokens(tokens : list[str]):
+    cleared_tokens = []
+    for token in tokens:
+        token = token.strip()
+        if token.startswith("c[") and token.endswith("]"):
+            cleared_tokens.append(token)
+            continue
+        cleared_token = token.replace(" ", "")
+        cleared_tokens.append(cleared_token)
 
-def calculate_loop(tokens: list[str]):
-    operators_priority = {"+": 1, "-": 1, "*": 2, "/": 2}
-    while len(tokens) > 1:
-        index = -1
-        priority = -1
-        for i, token in enumerate(tokens):
-            if not isinstance(token, pd.Series) and priority < operators_priority.get(token, -1):
-                priority = operators_priority[token]
-                index = i
-        tokens = calculate(tokens, index)
-    return tokens[0]
+    return cleared_tokens
 
-
-def calculate(tokens: list[str], index):
-    left_number, right_number = convert_numbers(tokens[index - 1], tokens[index + 1])
-    operator = tokens[index]
-    result = ""
-    match operator:
-        case "+":
-            result = left_number + right_number
-        case "-":
-            result = left_number - right_number
-        case "*":
-            result = left_number * right_number
-        case "/":
-            result = left_number / right_number
-
-    tokens[index - 1] = result
-    del tokens[index + 1]
-    del tokens[index]
-    return tokens
-
-
-def convert_to_series(df, tokens):
+def validate_tokens(tokens: list[str]):
+    """ Weryfikuję czy tokeny są w poprawnej kolejności"""
     operators = ["+", "-", "*", "/"]
+
+    if len(tokens) == 0:
+        return False, f"Empty operation"
+
+
     for i, token in enumerate(tokens):
-        if token not in operators and not check_is_float(token):
-            tokens[i] = df[token]
-    return tokens
+        if i % 2 == 0:
+            if not check_is_float(token) and (not token.startswith("c[") or not token.endswith("]")):
+                return False, f"Wrong operation in {tokens} - token index = {i}"
+        if i % 2 == 1:
+            if not token in operators:
+                return False, f"Wrong operation in {tokens} - token index = {i}"
+            if token == tokens[-1]:
+                return False, f"Wrong operation in {tokens} - token index = {i}"
+            if token == "/" and tokens[i + 1] == "0":
+                return False, f"Cannot divide by 0 in {tokens} token index = {i}"
+    return True
 
-def convert_numbers(left_number : str | pd.Series, right_number : str | pd.Series):
-    if not isinstance(left_number, pd.Series):
-        left_number = float(left_number)
-    if not isinstance(right_number, pd.Series):
-        right_number = float(right_number)
-
-    return left_number, right_number
-
-def check_is_float(number: str):
+def check_is_float(token: str):
     try:
-        number = float(number)
+        float(token)
         return True
     except ValueError:
         return False
+
+tokens1 = tokenizer("2 + c[cena-netto]")
+
+print(tokens1)
+print(validate_tokens(tokens1))
