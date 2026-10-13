@@ -1,8 +1,13 @@
-def tokenizer(user_input: str):
+def tokenizer(user_input: str) -> list[str]:
+    """ Tokenize input od użytkownika. Zwraca wyczyszczone tokeny"""
     operators = ["+", "-", "*", "/"]
     bufor = ""
     tokens = []
+
+    user_input = user_input.replace("=", "", count=1)
     user_input = user_input.strip()
+
+
     for i, token in enumerate(user_input):
         if not bufor.startswith("c["):
             bufor = bufor.strip()
@@ -26,11 +31,11 @@ def tokenizer(user_input: str):
             continue
         if i == len(user_input) -1:
             tokens.append(bufor)
-    print(tokens)
     cleared_tokens = clear_tokens(tokens)
     return cleared_tokens
 
-def clear_tokens(tokens : list[str]):
+def clear_tokens(tokens : list[str]) -> list[str]:
+    """ Oczyszcza tokeny z pustych znaków """
     cleared_tokens = []
     for token in tokens:
         token = token.strip()
@@ -49,7 +54,6 @@ def validate_tokens(tokens: list[str]):
     if len(tokens) == 0:
         return False, f"Empty operation"
 
-
     for i, token in enumerate(tokens):
         if i % 2 == 0:
             if not check_is_float(token) and (not token.startswith("c[") or not token.endswith("]")):
@@ -61,7 +65,7 @@ def validate_tokens(tokens: list[str]):
                 return False, f"Wrong operation in {tokens} - token index = {i}"
             if token == "/" and tokens[i + 1] == "0":
                 return False, f"Cannot divide by 0 in {tokens} token index = {i}"
-    return True
+    return True, ""
 
 def check_is_float(token: str):
     try:
@@ -70,7 +74,4 @@ def check_is_float(token: str):
     except ValueError:
         return False
 
-tokens1 = tokenizer("2 + c[cena-netto]")
 
-print(tokens1)
-print(validate_tokens(tokens1))

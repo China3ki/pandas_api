@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from uuid import uuid4
 
+import pandas as pd
 from fastapi import UploadFile
 
 
@@ -14,6 +15,7 @@ def verify_file(file: UploadFile) -> bool:
         return False
 
 async def upload_file(file : UploadFile) -> dict:
+    """ Uploaduje plik wysłany przez api do folderu files."""
     save_path = Path(__file__).resolve().parent.parent / "files"
     if not save_path.exists():
         os.mkdir(save_path)
@@ -22,6 +24,20 @@ async def upload_file(file : UploadFile) -> dict:
     save_path = save_path / file_name
     save_path.write_bytes(content)
     return { "Saved": "Ok", "Filename": file_name }
+
+
+def save_existed_files(df: pd.DataFrame, filename : str):
+    save_path = Path(__file__).resolve().parent.parent / "files" / filename
+    file_extension = filename.split(".")[1]
+    match file_extension:
+        case "csv":
+            pd.DataFrame.to_csv(df, path_or_buf=save_path, index=False)
+        case "json":
+            pd.DataFrame.to_json(df, path_or_buf=save_path, index=False)
+        case "xlsx":
+            pd.DataFrame.to_excel(df, save_path, index= False)
+
+
 
 
 
