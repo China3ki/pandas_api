@@ -1,0 +1,1 @@
+Szybki projekcik do przećwiczenia pandas i fastapi
