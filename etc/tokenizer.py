@@ -1,3 +1,6 @@
+from enums.df_status import DataStatus
+
+
 def tokenizer(user_input: str) -> list[str]:
     """ Tokenize input od użytkownika. Zwraca wyczyszczone tokeny"""
     operators = ["+", "-", "*", "/"]
@@ -57,14 +60,15 @@ def validate_tokens(tokens: list[str]):
     for i, token in enumerate(tokens):
         if i % 2 == 0:
             if not check_is_float(token) and (not token.startswith("c[") or not token.endswith("]")):
-                return False, f"Wrong operation in {tokens} - token index = {i}"
+                # return False, f"Wrong operation in {tokens} - token index = {i}"
+                return False, DataStatus.WRONG_OPERATION
         if i % 2 == 1:
             if not token in operators:
-                return False, f"Wrong operation in {tokens} - token index = {i}"
+                return False, DataStatus.WRONG_OPERATION
             if token == tokens[-1]:
-                return False, f"Wrong operation in {tokens} - token index = {i}"
+                return False, DataStatus.WRONG_OPERATION
             if token == "/" and tokens[i + 1] == "0":
-                return False, f"Cannot divide by 0 in {tokens} token index = {i}"
+                return False, DataStatus.CANNOT_DEVICE_BY_0
     return True, ""
 
 def check_is_float(token: str):

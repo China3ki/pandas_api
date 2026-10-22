@@ -1,25 +1,32 @@
-from dto.add_column_dto import AddColumn
+from dto.column_dto import ColumnDto
+from enums.df_status import DataStatus
 from etc.tokenizer import tokenizer, validate_tokens
 from services.file_service import save_existed_files
 from services.utils import convert_to_dataframe, convert_to_series
 import pandas as pd
 
-def add_column_service(filename: str, new_column: AddColumn):
-    df_is_valid, df, file_error_message = convert_to_dataframe(filename)
+def data_service(filename: str, column: ColumnDto, is_edit: bool):
+    df_is_valid, df = convert_to_dataframe(filename)
     if not df_is_valid:
-        return False, file_error_message
+        return DataStatus.DF_DOES_NOT_EXIST
 
-    if new_column.value is None or new_column.value.lower() == "null":
-        df[new_column.column_name] = new_column.value
+    if not is_edit and  column.column_name in df: ## Sprawdza, czy wykonane call jest edycją i czy nazwa kolumna istnieje w dataframe
+      return  DataStatus.COLUMN_EXIST # Jeśli kolumna istnieje wyrzuca błąd.
+
+    if is_edit and not column.column_name in df:
+        return DataStatus.COLUMN_DOES_NOT_EXIST
+
+    if column.value is None or column.value.lower() == "null":
+        df[column.column_name] = column.value
         save_existed_files(df, filename)
-        return True, f"Column {new_column.column_name} has been added"
+        return DataStatus.OK
 
-    if not new_column.value.startswith("="):
-        df[new_column.column_name] = new_column.value
+    if not column.value.startswith("="):
+        df[column.column_name] = column.value
         save_existed_files(df, filename)
-        return True, f"Column {new_column.column_name} has been added"
+        return DataStatus.OK
 
-    tokens = tokenizer(new_column.value)
+    tokens = tokenizer(column.value)
     is_valid, error_message = validate_tokens(tokens)
     if not is_valid:
         return error_message
@@ -28,22 +35,30 @@ def add_column_service(filename: str, new_column: AddColumn):
     if len(tokens) == 1: # Sprawdza, czy istnieje tylko jeden token. Jeśli tak konwertuję na właściwy typ danych
         is_valid, value = convert_to_number(tokens[0], df)
         if not is_valid:
-            return value
-        df[new_column.column_name] = value
+            return DataStatus.INCORRECT_VALUE
+        df[column.column_name] = value
         save_existed_files(df, filename)
-        return True, f"Column '{new_column.column_name}' has been added"
-
+        return DataStatus.OK
 
     value_is_valid, value = calculate_loop(tokens, df)
 
-
     if value_is_valid:
-        df[new_column.column_name] = value
+        df[column.column_name] = value
     else:
-        return False, "Column does not exist!"
+        return DataStatus.COLUMN_DOES_NOT_EXIST
     save_existed_files(df, filename)
-    return True, f"Column '{new_column.column_name}' has been added"
+    return DataStatus.OK
 
+def delete_column_service(filename: str, column_name: str):
+    df_is_valid, df = convert_to_dataframe(filename)
+    if not df_is_valid:
+        return DataStatus.DF_DOES_NOT_EXIST
+    try:
+        df = df.drop(columns=column_name)
+        save_existed_files(df, filename)
+    except KeyError:
+        return DataStatus.COLUMN_DOES_NOT_EXIST
+    return DataStatus.OK
 
 
 def calculate_loop(tokens: list[str], df: pd.DataFrame):
